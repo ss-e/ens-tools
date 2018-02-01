@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<body>
+<head>
+<script type="text/javascript" src="web3.min.js"></script>
+<style>
+	.eth-reg-table {display: none;}
+	.eth-auction-table {display: none;}
+	.eth-reveal-table {display: none;}
+	.eth-finalize-table {display: none;}
+	.test-table {display: none;}
+	.test-reg-table {display: none;}
+	.tools-table {display: none;}
+</style>
+</head>
+<center>
+<h1>ENS Tools</h1>
+<h5>super alpha test - no warranty - ropsten testnet only</h5>
+<table><tr><td class="threadHeader">Account:</td><td><select id="account"></select></td></tr>
+<tr><td>Domain:</td><td><input type="text" name="domain" id="domain"></input></td></tr>
+<tr><td></td><td><form><input type="radio" value="eth" name="suffix" id="suffixeth" checked >.eth <input type="radio" name="suffix" id="suffixtest" value="test">.test</form></td></tr>
+<tr><td></td><td><button type="button" onclick="checkDomain()">Check</button></td></td>
+</table>
+</center>
+<br>
+<table class="eth-reg-table" id="eth-reg-table">
+<tr><td><button type="button" onclick="ethStartAuction()">Start auction for domain</button></td></tr>
+</table>
+
+<table class="eth-auction-table" id="eth-auction-table">
+<tr align="center"><td colspan="3">Auction end date: <a id="eth-end-date"></a></td></tr>	
+<tr id="eth-auction-row"><td>Bid amount:<input type="text" name="bid-amount" id="bid-amount" value="0.1"></input></td><td>Salt value:<input type="password" name="salt-value" id="salt-value" value="z0r"></input></td><td><button type="button" onclick="ethMakeBid()" id="eth-make-bid">Make a bid</button></td></tr>
+<tr id="eth-reveal-row"><td>Bid amount:<input type="text" name="bid-amount2" id="bid-amount2" value="0.1"></input></td><td>Salt value:<input type="password" name="salt-value2" id="salt-value2" value="z0r"></input></td><td><button type="button" onclick="ethRevealBid()">Reveal a bid</button></td></tr>
+<tr id="eth-finalize-row"><td><button type="button" onclick="ethFinalizeBid()" id="eth-finalize-bid">Finalize auction</button></td></tr>
+</table>
+
+
+<table class="test-reg-table" id="test-reg-table">
+<tr id="test-register-button"><td><button type="button" onclick="registerTestRegistrar()" id="test-claim">Register domain</button></td></tr>
+</table>
+
+<table class="test-table" id="test-table">
+<tr align="center" id="test-available-date-text"><td>Domain will be available: <a id="test-available-date"></a></td></tr>
+</table>
+
+<table class="tools-table" id="tools-table">
+<tr><td>Owner: <a id="tools-owner"></a></td></tr><tr><td>Record: <a id="tools-record"></a></td></tr><tr><td>Resolver: <a id="tools-resolver"></a></td></tr>
+<tr><td><button type="button" onclick="setResolver()">Set resolver</button></td></tr>
+<tr><td><button type="button" onclick="setContent()">Set record</button> Record (no 0x):<input type="text" name="record" id="record"></input></td></tr>
+</table>
+
+<div id="debug"><h4>The Mist browser or the MetaMask extension is required to use this application</h4></div>
+
+		
+<script>
+	window.onload = function () {
+		if (typeof web3 !== 'undefined') {
+			web3 = new Web3(web3.currentProvider);
+		} else {
+			web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+		}
+		var js = document.createElement("script");
+		js.src = "ensutils-testnet.js";
+		document.getElementsByTagName("head")[0].appendChild(js);
+		web3.eth.getAccounts(function(error, result){  
+			for (var i=0;i<result.length;i++) {
+				var option = document.createElement("option");
+				option.text = result[i];
+				document.getElementById("account").add(option,i);
+			}		
+		});
+		
+	}
+	//frontend
+	function hideAll() {
+		document.getElementById("tools-table").style.display = "none";
+		document.getElementById("eth-auction-table").style.display = "none";
+		document.getElementById("eth-auction-row").style.display = "none";
+		document.getElementById("eth-reveal-row").style.display = "none";
+		document.getElementById("eth-finalize-row").style.display = "none";
+		document.getElementById("eth-reg-table").style.display = "none";
+		document.getElementById("test-reg-table").style.display = "none";
+		document.getElementById("test-table").style.display = "none";
+	}
+	function loadEthReg() {						
+		document.getElementById("eth-reg-table").style.display = "block";
+	}
+	function loadEthAuction() {
+		document.getElementById("eth-auction-table").style.display = "block";
+		document.getElementById("eth-auction-row").style.display = "block";		
+	}
+	function loadEthReveal() {
+		document.getElementById("eth-auction-table").style.display = "block";
+		document.getElementById("eth-reveal-row").style.display = "block";		
+	}
+	function loadEthFinalize() {
+		document.getElementById("eth-auction-table").style.display = "block";
+		document.getElementById("eth-finalize-row").style.display = "block";	
+	}
+	function loadTestReg() {
+		document.getElementById("test-reg-table").style.display = "block";
+	}
+	function loadTestAdmin() {
+		document.getElementById("test-table").style.display = "block";
+		loadEthAdmin();
+	}
+	function loadEthAdmin() {		
+		document.getElementById("tools-table").style.display = "block";
+		viewRecordOwner();
+		getRecordHash();
+	}
+	//.test functions
+	function registerTestRegistrar() {
+		domain = document.getElementById("domain").value;
+		var useAccount = document.getElementById("account").value;
+		testRegistrar.register(web3.sha3(domain), useAccount, {from: useAccount}, function (error,value) {
+			document.getElementById("debug").textContent = 'txid: ' + value;
+		});
+	}
+	//.eth functions
+	function ethStartAuction() {
+		domain = document.getElementById("domain").value;
+		var useAccount = document.getElementById("account").value;
+		var content = ethRegistrar.startAuction(web3.sha3(domain), {from: useAccount, gas: 100000}, function (error,value) {
+			document.getElementById("debug").textContent = 'txid: ' + value;
+		});
+		loadEthAuction();
+	}
+	function ethMakeBid() {
+		domain = document.getElementById("domain").value;
+		var useAccount = document.getElementById("account").value;
+		var bid = ethRegistrar.shaBid(web3.sha3(domain), useAccount, web3.toWei(document.getElementById("bid-amount").value, 'ether'), web3.sha3(document.getElementById("salt-value").value), function(error,result) { 
+			ethRegistrar.newBid(result, {from: useAccount, value: web3.toWei(document.getElementById("bid-amount").value, 'ether'), gas: 500000}, function (error,result2) {
+				document.getElementById("debug").textContent = 'txid: ' + result2;
+			});
+		});
+	}
+	function ethRevealBid() {
+		domain = document.getElementById("domain").value;
+		var useAccount = document.getElementById("account").value;
+		ethRegistrar.unsealBid(web3.sha3(domain), useAccount, web3.toWei(document.getElementById("bid-amount2").value, 'ether'), web3.sha3(document.getElementById("salt-value2").value), {from: useAccount, gas: 500000}, function (error,value) {
+			document.getElementById("debug").textContent = 'txid: ' + value;
+		});
+	}
+	function ethFinalizeBid() {
+		domain = document.getElementById("domain").value;
+		var useAccount = document.getElementById("account").value;
+		ethRegistrar.finalizeAuction(web3.sha3(domain), {from: useAccount, gas: 500000}, function (error,value) {
+			document.getElementById("debug").textContent = 'txid: ' + value;
+		});
+		loadEthAdmin();
+	}
+	//generic functions
+	function checkDomain() {
+		hideAll();
+		domain = document.getElementById("domain").value;
+		if (document.getElementById("suffixeth").checked) {
+			//var content = ethAvailable(domain);
+			ethRegistrar.entries(web3.sha3(domain),function(error, content) {
+				if (content[0] == 0) {
+					document.getElementById("debug").textContent = "Domain is available!";
+					loadEthReg();
+				}
+				else if (content[0] == 1) {
+					document.getElementById("debug").textContent = "Domain is up for auction";
+					ethRegistrar.entries(web3.sha3(domain),function(error,value) {
+						var endDate = value[2]*1000;
+						var time = (new Date());
+						var diff = endDate - time;
+						var endDateDisplay = new Date(endDate).toUTCString();
+						document.getElementById("eth-end-date").textContent = endDateDisplay;
+						//if we are in bid phase
+						if (diff > 172800000) {
+							loadEthAuction();
+						}
+						//else if we are in reveal phase
+						else if (diff > 0 && diff < 172800000) {
+							loadEthReveal();
+						}
+						//else if we are in finalization phase
+						else if (diff <= 0) {
+							loadEthFinalize();
+						}
+					});
+					
+				}
+				else if (content[0] == 5) {
+					document.getElementById("debug").textContent = "Unused, not available until: ";
+					var timeRemaining = new Date(ethRegistrar.getAllowedTime(web3.sha3(domain)) * 1000);
+					document.getElementById("debug").textContent += timeRemaining;
+				}
+				else {
+					document.getElementById("debug").textContent = "Name is not available";
+					loadEthAdmin();
+				}
+			});			
+		}
+		else {
+			domain = document.getElementById("domain").value;		
+			testRegistrar.expiryTimes(web3.sha3(domain),function(error, value) {
+				value = value*1000;
+				if (value == 0) {
+					document.getElementById("test-available-date").style.display = "none";
+					loadTestReg();
+				}
+				else {
+					var datetest = new Date(value).toUTCString();
+					document.getElementById("test-available-date").textContent = datetest;
+					loadTestAdmin();
+				}
+			});
+		}
+	}
+	function setResolver() {
+		domain = document.getElementById("domain").value;
+		var useAccount = document.getElementById("account").value;
+		if (document.getElementById("suffixeth").checked) {
+			domain += '.eth';
+			ens.setResolver(namehash(domain), publicResolver.address, {from: useAccount, gas:100000}, function (error,value) {
+			document.getElementById("debug").textContent = 'txid: ' + value;
+			});
+		}
+		else {
+			domain += '.test';
+			ens.setResolver(namehash(domain), publicResolver.address, {from: useAccount, gas:100000}, function (error,value) {
+				document.getElementById("debug").textContent = 'txid: ' + value;
+			});
+		}
+	}
+	function viewRecordOwner() {
+		document.getElementById("tools-owner").textContent = "";
+		domain = document.getElementById("domain").value;
+		if (document.getElementById("suffixeth").checked) {
+			domain += '.eth';
+		}
+		else {
+			domain += '.test';
+		}
+		var owner = ens.owner(namehash(domain),function(error, value) {
+			document.getElementById("tools-owner").textContent = value;
+		});
+	}
+	function getRecordHash() {
+		document.getElementById("tools-record").textContent = "";
+		document.getElementById("tools-resolver").textContent = "";
+		domain = document.getElementById("domain").value;
+		if (document.getElementById("suffixeth").checked) {		
+			domain += '.eth';
+		}
+		else {
+			domain += '.test';
+		}
+		var node = namehash(domain);
+		var resolverAddress = ens.resolver(node,function(error, value) {
+			if (value === '0x0000000000000000000000000000000000000000') {
+				document.getElementById("tools-record").textContent = "";
+				document.getElementById("tools-resolver").textContent = "";
+			}
+			document.getElementById("tools-resolver").textContent = value;
+			resolverContract.at(value).content(node,function(error, value2) {
+				document.getElementById("tools-record").textContent = value2;
+			});
+		});
+	}
+	function setContent() {
+		domain = document.getElementById("domain").value;
+		if (document.getElementById("suffixeth").checked) {	
+			domain += '.eth';
+		}
+		else {
+			domain += '.test';
+		}
+		var record = "0x" + document.getElementById("record").value;		
+		var useAccount = document.getElementById("account").value;
+		document.getElementById("debug").textContent = 'namehash: ';
+		document.getElementById("debug").textContent += namehash(domain);
+		publicResolver.setContent(namehash(domain), record, {from: useAccount, gas:100000}, function (error,value) {
+			document.getElementById("debug").textContent = 'txid: ' + value;
+		});
+	}
+	
+</script>
+
+</body>
+</html>
