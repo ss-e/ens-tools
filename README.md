@@ -1,14 +1,14 @@
-#ENS Tools
-#DO NOT USE ON MAINNET, ROPSTEN ONLY
+# ENS Tools
+# DO NOT USE ON MAINNET, ROPSTEN ONLY
 Frontend for ENS, set up .test and .eth domains
 No warranty, partially tested with .eth
 
-##Usage
+## Usage
 Put all files into same directory on webserver
 Run your preferred browser connected to Ethereum ropsten testnet
 Tested in Metamask
 
-##TODO
+## TODO
 *determine which chain we are on and load the correct contract
 *prettier ui 
 *store bids (cookies?)
