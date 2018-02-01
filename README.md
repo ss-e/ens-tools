@@ -9,10 +9,10 @@ Run your preferred browser connected to Ethereum ropsten testnet
 Tested in Metamask
 
 ## TODO
-*determine which chain we are on and load the correct contract
-*prettier ui 
-*store bids (cookies?)
-*detect when transaction is complete
-*subdomain support
-*domain transfer
-*reverse name resolution
+* determine which chain we are on and load the correct contract
+* prettier ui 
+* store bids (cookies?)
+* detect when transaction is complete
+* subdomain support
+* domain transfer
+* reverse name resolution
